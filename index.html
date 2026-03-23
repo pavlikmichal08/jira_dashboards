@@ -4,664 +4,535 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jira Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg: #0f1117;
-    --bg2: #181c27;
-    --bg3: #1e2335;
-    --border: rgba(255,255,255,0.08);
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --accent: #6366f1;
-    --accent2: #06b6d4;
-    --success: #10b981;
-    --warn: #f59e0b;
-    --danger: #ef4444;
-    --radius: 10px;
-    --font: 'Inter', system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+:root {
+  --bg: #0a0a0f; --bg2: #111118; --bg3: #18181f; --bg4: #1e1e28;
+  --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.12);
+  --text: #e8e8f0; --muted: #5a5a72; --muted2: #8888a8;
+  --accent: #7c6af7; --accent2: #38bdf8; --accent3: #34d399;
+  --warn: #fbbf24; --danger: #f87171;
+  --font-d: 'Syne', sans-serif; --font-m: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-m); font-size: 13px; min-height: 100vh; }
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: linear-gradient(rgba(124,106,247,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(124,106,247,0.03) 1px,transparent 1px);
+  background-size: 40px 40px;
+}
+.app { position:relative; z-index:1; display:grid; grid-template-rows:52px 1fr; min-height:100vh; }
+header { background:rgba(10,10,15,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; gap:12px; }
+.logo { font-family:var(--font-d); font-weight:800; font-size:15px; letter-spacing:-.5px; }
+.logo span { color:var(--accent); }
+.pill { font-size:9px; font-weight:600; padding:2px 8px; border-radius:99px; letter-spacing:1px; text-transform:uppercase; }
+.pill-mcp  { background:rgba(124,106,247,.12); color:var(--accent); border:1px solid rgba(124,106,247,.3); }
+.pill-ok   { background:rgba(52,211,153,.1);   color:var(--accent3); border:1px solid rgba(52,211,153,.25); }
+.pill-err  { background:rgba(248,113,113,.1);  color:var(--danger);  border:1px solid rgba(248,113,113,.25); }
+.pill-idle { background:rgba(90,90,114,.12);   color:var(--muted2);  border:1px solid var(--border); }
+#status-pill { margin-left:auto; }
+.hbtn { background:var(--bg3); border:1px solid var(--border2); color:var(--muted2); padding:5px 12px; border-radius:6px; font-size:11px; font-family:var(--font-m); cursor:pointer; display:none; transition:all .15s; }
+.hbtn:hover { color:var(--text); border-color:var(--accent); }
+main { display:grid; grid-template-columns:270px 1fr; height:calc(100vh - 52px); }
+aside { background:var(--bg2); border-right:1px solid var(--border); padding:20px 16px; overflow-y:auto; display:flex; flex-direction:column; }
+.content { padding:24px; overflow-y:auto; }
+.sec { font-size:9px; font-weight:600; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin:20px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.sec:first-child { margin-top:0; }
+label { display:block; font-size:11px; color:var(--muted2); margin:10px 0 4px; }
+input, select, textarea { width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12px; font-family:var(--font-m); padding:8px 10px; outline:none; transition:border-color .2s; }
+input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+input[type=password] { letter-spacing:3px; }
+textarea { min-height:72px; resize:vertical; line-height:1.5; }
+.hint { margin-top:5px; font-size:10px; color:var(--muted); line-height:1.6; }
+.hint a { color:var(--accent2); text-decoration:none; }
 
-  /* ── Layout ── */
-  .app { display: grid; grid-template-rows: 56px 1fr; min-height: 100vh; }
-  header { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 16px; }
-  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -.3px; }
-  header .badge { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; letter-spacing: .5px; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-left: auto; transition: background .3s; }
-  .status-dot.ok { background: var(--success); }
-  .status-dot.err { background: var(--danger); }
-  #status-text { font-size: 12px; color: var(--muted); }
+.btn-primary { margin-top:14px; width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-family:var(--font-d); font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; }
+.btn-primary:hover { opacity:.88; }
+.btn-primary:disabled { opacity:.35; cursor:not-allowed; }
+.btn-secondary { margin-top:8px; width:100%; padding:8px; background:transparent; color:var(--muted2); border:1px solid var(--border2); border-radius:8px; font-family:var(--font-m); font-size:11px; cursor:pointer; transition:all .15s; }
+.btn-secondary:hover { color:var(--text); border-color:var(--muted2); }
 
-  main { display: grid; grid-template-columns: 280px 1fr; }
-  sidebar { grid-column: 1; background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 16px; overflow-y: auto; }
-  .content { grid-column: 2; padding: 24px; overflow-y: auto; }
+.proj-list { display:flex; flex-direction:column; gap:5px; margin-top:8px; max-height:180px; overflow-y:auto; }
+.proj-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; cursor:pointer; border:1px solid var(--border); transition:all .15s; font-size:11px; color:var(--muted2); }
+.proj-item:hover { border-color:var(--muted2); color:var(--text); }
+.proj-item.active { background:rgba(124,106,247,.1); border-color:var(--accent); color:var(--accent); }
+.proj-key { font-weight:600; font-size:10px; }
+.proj-name { color:var(--muted); font-size:10px; }
+.proj-item.active .proj-name { color:rgba(124,106,247,.7); }
+.empty-proj { font-size:11px; color:var(--muted); padding:10px; text-align:center; }
 
-  /* ── Forms ── */
-  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; margin-top: 20px; }
-  .section-label:first-child { margin-top: 0; }
-  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 12px; }
-  label:first-of-type { margin-top: 0; }
-  input, select, textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 13px; padding: 8px 10px; outline: none; transition: border-color .2s; }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-  input[type=password] { font-family: monospace; letter-spacing: 2px; }
-  textarea { min-height: 72px; resize: vertical; font-size: 12px; }
-  select option { background: var(--bg3); }
+.err-box { display:none; background:rgba(248,113,113,.07); border:1px solid rgba(248,113,113,.2); border-radius:8px; padding:12px 14px; color:var(--danger); font-size:12px; margin-bottom:16px; white-space:pre-wrap; line-height:1.6; }
+.err-box.show { display:block; }
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; height:340px; color:var(--muted); font-size:12px; text-align:center; }
+.big { font-family:var(--font-d); font-size:32px; font-weight:800; color:var(--bg4); letter-spacing:-1px; }
+.spinner { width:24px; height:24px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.tabs { display:flex; gap:2px; margin-bottom:22px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:3px; width:fit-content; }
+.tab { padding:6px 14px; border-radius:6px; font-size:11px; font-family:var(--font-m); cursor:pointer; color:var(--muted2); transition:all .15s; }
+.tab.active { background:var(--bg4); color:var(--text); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:20px; }
+.kpi { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:16px 18px; position:relative; overflow:hidden; }
+.kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--kpi-color,var(--accent)); }
+.kpi .kl { font-size:9px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:1px; }
+.kpi .kv { font-family:var(--font-d); font-size:30px; font-weight:800; margin:6px 0 3px; line-height:1; letter-spacing:-1px; }
+.kpi .ks { font-size:10px; color:var(--muted); }
+.charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.ct { font-family:var(--font-d); font-size:12px; font-weight:700; color:var(--muted2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px; }
+.card canvas { max-height:200px; }
+.full { grid-column:1/-1; }
+.tbl { width:100%; border-collapse:collapse; font-size:11px; }
+.tbl th { text-align:left; padding:8px 12px; font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); }
+.tbl td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:var(--bg3); }
+.klink { color:var(--accent2); text-decoration:none; font-weight:500; }
+.klink:hover { text-decoration:underline; }
+.chip { display:inline-block; padding:2px 8px; border-radius:4px; font-size:9px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; font-family:var(--font-m); }
+.chip.todo     { background:var(--bg4); color:var(--muted2); border:1px solid var(--border2); }
+.chip.progress { background:rgba(124,106,247,.12); color:#a78bfa; border:1px solid rgba(124,106,247,.25); }
+.chip.done     { background:rgba(52,211,153,.1); color:var(--accent3); border:1px solid rgba(52,211,153,.2); }
+.chip.blocked  { background:rgba(248,113,113,.1); color:var(--danger); border:1px solid rgba(248,113,113,.2); }
+.cl-list { list-style:none; }
+.cl-list li { font-size:10px; color:var(--muted2); padding:2px 0; line-height:1.5; }
+.cl-list li::before { content:'→ '; color:var(--accent); }
+.ai-card { background:var(--bg2); border:1px solid rgba(124,106,247,.25); border-radius:10px; padding:18px; margin-bottom:16px; }
+.ai-hdr { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.ai-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.ai-lbl { font-family:var(--font-d); font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.5px; text-transform:uppercase; }
+.ai-card p { font-size:12px; line-height:1.75; color:var(--text); white-space:pre-wrap; }
+.blink::after { content:'▋'; animation:blink .7s step-end infinite; color:var(--accent); }
+@keyframes blink { 50% { opacity:0; } }
+pre.raw { font-size:10px; color:var(--muted2); max-height:360px; overflow:auto; white-space:pre-wrap; line-height:1.6; margin:0; }
 
-  .btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; padding: 9px 16px; transition: opacity .15s, transform .1s; }
-  .btn:active { transform: scale(.97); }
-  .btn-primary { background: var(--accent); color: #fff; width: 100%; justify-content: center; margin-top: 14px; }
-  .btn-primary:hover { opacity: .88; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* ── Dashboard ── */
-  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
-  .kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
-  .kpi .label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .4px; text-transform: uppercase; }
-  .kpi .value { font-size: 28px; font-weight: 700; margin-top: 4px; line-height: 1; }
-  .kpi .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
-  .kpi.accent { border-color: var(--accent); }
-  .kpi.success { border-color: var(--success); }
-  .kpi.warn { border-color: var(--warn); }
-
-  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-  .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-  .chart-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 14px; color: var(--text); }
-  .chart-card canvas { max-height: 220px; }
-
-  .full-width { grid-column: 1 / -1; }
-
-  /* ── Issue timeline table ── */
-  .issue-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .issue-table th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
-  .issue-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  .issue-table tr:last-child td { border-bottom: none; }
-  .issue-table tr:hover td { background: var(--bg3); }
-  .chip { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
-  .chip.todo { background: #1e2335; color: var(--muted); border: 1px solid var(--border); }
-  .chip.progress { background: rgba(99,102,241,.15); color: #818cf8; border: 1px solid rgba(99,102,241,.3); }
-  .chip.done { background: rgba(16,185,129,.12); color: #34d399; border: 1px solid rgba(16,185,129,.25); }
-  .chip.blocked { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.25); }
-  .changelog-list { list-style: none; padding: 0; }
-  .changelog-list li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 11px; color: var(--muted); }
-  .changelog-list li::before { content: '›'; color: var(--accent2); flex-shrink: 0; }
-
-  /* ── AI insights ── */
-  .ai-box { background: var(--bg2); border: 1px solid rgba(99,102,241,.3); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; }
-  .ai-box .ai-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .ai-box .ai-icon { width: 22px; height: 22px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; flex-shrink: 0; }
-  .ai-box .ai-title { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .3px; }
-  .ai-box p { font-size: 13px; line-height: 1.65; color: var(--text); white-space: pre-wrap; }
-  .ai-box.loading p::after { content: '▋'; animation: blink .7s step-end infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
-
-  /* ── Empty / loading ── */
-  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 300px; color: var(--muted); font-size: 13px; }
-  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .error-banner { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: var(--radius); padding: 12px 16px; color: #f87171; font-size: 13px; margin-bottom: 16px; display: none; }
-  .error-banner.show { display: block; }
-
-  .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
-  .tab { padding: 7px 14px; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--muted); transition: all .15s; border: 1px solid transparent; }
-  .tab.active { background: var(--bg3); color: var(--text); border-color: var(--border); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* step indicator for setup */
+.step-flow { display:flex; flex-direction:column; gap:0; margin-bottom:16px; }
+.step { display:flex; gap:10px; align-items:flex-start; padding:8px 0; }
+.step-num { width:18px; height:18px; border-radius:50%; background:var(--bg4); border:1px solid var(--border2); color:var(--muted2); font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step.done .step-num { background:rgba(52,211,153,.15); border-color:var(--accent3); color:var(--accent3); }
+.step.active .step-num { background:rgba(124,106,247,.15); border-color:var(--accent); color:var(--accent); }
+.step-body { font-size:11px; color:var(--muted2); line-height:1.5; }
+.step.done .step-body { color:var(--muted); }
+.step.active .step-body { color:var(--text); }
 </style>
 </head>
 <body>
 <div class="app">
 
-<!-- Header -->
 <header>
-  <h1>Jira Dashboard</h1>
-  <span class="badge">AI-powered</span>
-  <span class="status-dot" id="dot"></span>
-  <span id="status-text">Nepripojený</span>
-  <button class="btn btn-outline btn-sm" id="refresh-btn" onclick="loadData()" style="margin-left:8px;display:none">↻ Refresh</button>
+  <div class="logo">jira<span>.</span>dash</div>
+  <span class="pill pill-mcp">Atlassian MCP</span>
+  <span class="pill pill-idle" id="status-pill">idle</span>
+  <button class="hbtn" id="refresh-btn" onclick="loadDashboard()">↻ refresh</button>
 </header>
 
 <main>
-<!-- Sidebar: Configuration -->
-<aside style="background:var(--bg2);border-right:1px solid var(--border);padding:20px 16px;overflow-y:auto;">
-
-  <div class="section-label">Jira pripojenie</div>
-
-  <label>Jira Cloud URL</label>
-  <input type="text" id="jira-url" placeholder="https://yourcompany.atlassian.net" />
-
-  <label>Email</label>
-  <input type="text" id="jira-email" placeholder="you@company.com" />
-
-  <label>API Token</label>
-  <input type="password" id="jira-token" placeholder="••••••••••••••" />
-  <div style="margin-top:6px;font-size:11px;color:var(--muted)">
-    <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color:var(--accent2)">Vygenerovať token →</a>
+<aside>
+  <!-- Step 1: Claude key -->
+  <div class="sec">1 — Claude API key</div>
+  <input type="password" id="claude-key" placeholder="sk-ant-••••••" oninput="onKeyInput()" />
+  <div class="hint">
+    Potrebný pre Atlassian MCP volania.<br>
+    <a href="https://console.anthropic.com/settings/keys" target="_blank">Vygenerovať key →</a>
+    · Každý používateľ zadáva vlastný.
   </div>
 
-  <div class="section-label" style="margin-top:20px">Projekt & filter</div>
+  <!-- Step 2: Jira URL -->
+  <div class="sec">2 — Jira workspace</div>
+  <label>Atlassian site URL</label>
+  <input type="text" id="jira-url" placeholder="yourcompany.atlassian.net" oninput="resetProjects()" />
+  <div class="hint">Len subdoména, napr. <code style="color:var(--accent2)">mojafirma.atlassian.net</code></div>
+  <button class="btn-secondary" id="load-proj-btn" onclick="loadProjects()">⟳ Načítať projekty</button>
 
-  <label>Project key(s)</label>
-  <input type="text" id="jira-project" placeholder="PROJ, TEAM" />
+  <!-- Step 3: Project -->
+  <div class="sec">3 — Projekt</div>
+  <div class="proj-list" id="proj-list">
+    <div class="empty-proj">Najprv načítaj projekty ↑</div>
+  </div>
 
+  <!-- Step 4: Options -->
+  <div class="sec">4 — Možnosti</div>
   <label>Max issues</label>
   <select id="jira-limit">
-    <option value="25">25</option>
+    <option value="20">20</option>
     <option value="50" selected>50</option>
     <option value="100">100</option>
-    <option value="200">200 (pomalšie)</option>
   </select>
+  <label>Custom AI prompt (voliteľné)</label>
+  <textarea id="custom-prompt" placeholder="Napr: Identifikuj issues vracajúce sa z Done späť do In Progress..."></textarea>
 
-  <label>Status filter</label>
-  <input type="text" id="status-filter" placeholder="Done, In Progress (prázdne = všetky)" />
+  <button class="btn-primary" id="load-btn" onclick="loadDashboard()" disabled>⚡ Načítať dashboard</button>
 
-  <div class="section-label" style="margin-top:20px">Claude API (pre AI analýzu)</div>
-  <label>API Key</label>
-  <input type="password" id="claude-key" placeholder="sk-ant-••••" />
-  <div style="margin-top:6px;font-size:11px;color:var(--muted)">
-    Voliteľné — potrebné pre AI insights a normalizáciu changelogov
-  </div>
-
-  <label>Custom metriky (prompt)</label>
-  <textarea id="custom-prompt" placeholder="Napr: Zisti priemerný čas v stave 'In Review'. Identifikuj issues, ktoré sa vracali z Done späť do In Progress."></textarea>
-
-  <button class="btn btn-primary" onclick="loadData()">
-    ⚡ Načítať dáta
-  </button>
-
-  <div style="margin-top:16px;font-size:11px;color:var(--muted);line-height:1.6">
-    Credentials sa ukladajú iba v pamäti prehliadača (sessionStorage) a neukladajú na server.
+  <div class="hint" style="margin-top:14px;text-align:center;line-height:1.8">
+    API key sa ukladá len v sessionStorage.<br>
+    Jira token nie je potrebný — MCP<br>sa autentifikuje cez tvoj Atlassian účet.
   </div>
 </aside>
 
-<!-- Main content -->
 <section class="content">
-  <div class="error-banner" id="error-banner"></div>
+  <div class="err-box" id="err-box"></div>
 
-  <!-- Empty state -->
   <div class="empty" id="empty-state">
-    <div style="font-size:32px">📊</div>
-    <div style="font-weight:600;color:var(--text)">Žiadne dáta</div>
-    <div>Vyplň konfiguráciu a stlač "Načítať dáta"</div>
+    <div class="big">NO DATA</div>
+    <div>Prejdi krokmi vľavo a klikni "Načítať dashboard"</div>
+    <div style="color:var(--accent);font-size:10px;margin-top:4px">Atlassian MCP · žiadna proxy · žiadny Jira token</div>
   </div>
 
-  <!-- Dashboard (hidden until data loads) -->
-  <div id="dashboard" style="display:none">
+  <div id="loading-state" style="display:none;align-items:center;justify-content:center;height:100%">
+    <div class="empty">
+      <div class="spinner"></div>
+      <div id="loading-text" style="color:var(--muted2)">Volám Claude + Atlassian MCP...</div>
+    </div>
+  </div>
 
-    <!-- Tabs -->
+  <div id="dashboard" style="display:none">
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('overview')">Prehľad</div>
-      <div class="tab" onclick="switchTab('changelog')">Historia / Changelog</div>
-      <div class="tab" onclick="switchTab('custom')">Custom metriky</div>
+      <div class="tab active" onclick="switchTab('overview')">overview</div>
+      <div class="tab" onclick="switchTab('changelog')">changelog</div>
+      <div class="tab" onclick="switchTab('ai')">AI analýza</div>
     </div>
 
-    <!-- ── Tab: Overview ── -->
     <div class="tab-panel active" id="tab-overview">
       <div class="kpi-row" id="kpi-row"></div>
-      <div class="charts-grid" id="charts-grid">
-        <div class="chart-card">
-          <h3>Rozdelenie podľa statusu</h3>
-          <canvas id="chart-status"></canvas>
-        </div>
-        <div class="chart-card">
-          <h3>Issues podľa assignee</h3>
-          <canvas id="chart-assignee"></canvas>
-        </div>
-        <div class="chart-card full-width">
-          <h3>Cycle time (dni od vytvorenia po Done)</h3>
-          <canvas id="chart-cycletime"></canvas>
-        </div>
+      <div class="charts-grid">
+        <div class="card"><div class="ct">Status rozdelenie</div><canvas id="chart-status"></canvas></div>
+        <div class="card"><div class="ct">Issues / assignee</div><canvas id="chart-assignee"></canvas></div>
+        <div class="card full"><div class="ct">Cycle time (dni)</div><canvas id="chart-cycle"></canvas></div>
       </div>
     </div>
 
-    <!-- ── Tab: Changelog ── -->
     <div class="tab-panel" id="tab-changelog">
-      <div class="chart-card full-width" style="margin-bottom:16px">
-        <h3>Issue história & changelog</h3>
-        <table class="issue-table" id="changelog-table">
-          <thead>
-            <tr>
-              <th>Issue</th>
-              <th>Súhrn</th>
-              <th>Aktuálny status</th>
-              <th>Cycle time</th>
-              <th>Posledné zmeny</th>
-            </tr>
-          </thead>
-          <tbody id="changelog-body"></tbody>
+      <div class="card full">
+        <div class="ct">Issue história & changelog</div>
+        <table class="tbl">
+          <thead><tr><th>Key</th><th>Súhrn</th><th>Status</th><th>Cycle time</th><th>Zmeny</th></tr></thead>
+          <tbody id="cl-body"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- ── Tab: Custom metrics / AI ── -->
-    <div class="tab-panel" id="tab-custom">
-      <div class="ai-box" id="ai-insights-box" style="display:none">
-        <div class="ai-header">
-          <div class="ai-icon">✦</div>
-          <div class="ai-title">AI analýza · Claude</div>
-        </div>
-        <p id="ai-insights-text"></p>
+    <div class="tab-panel" id="tab-ai">
+      <div class="ai-card" id="ai-card" style="display:none">
+        <div class="ai-hdr"><div class="ai-dot"></div><div class="ai-lbl">Claude · AI analýza</div></div>
+        <p id="ai-text"></p>
       </div>
-      <div class="chart-card full-width">
-        <h3>Raw data (JSON preview)</h3>
-        <pre id="raw-preview" style="font-size:11px;color:var(--muted);max-height:400px;overflow:auto;white-space:pre-wrap"></pre>
-      </div>
+      <div class="card full"><div class="ct">Raw JSON preview</div><pre class="raw" id="raw-pre"></pre></div>
     </div>
-  </div>
-
-  <!-- Loading overlay -->
-  <div class="empty" id="loading-state" style="display:none">
-    <div class="spinner"></div>
-    <div id="loading-text">Načítavam issues z Jiry...</div>
   </div>
 </section>
 </main>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════
-let state = { issues: [], rawChangelogs: {} };
-let charts = {};
-
-// ═══════════════════════════════════════════════════════
-//  HELPERS
-// ═══════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
-const cfg = () => ({
-  url:    $('jira-url').value.trim().replace(/\/$/, ''),
-  email:  $('jira-email').value.trim(),
-  token:  $('jira-token').value.trim(),
-  project: $('jira-project').value.trim(),
-  limit:  parseInt($('jira-limit').value),
-  statusFilter: $('status-filter').value.trim(),
-  claudeKey: $('claude-key').value.trim(),
-  customPrompt: $('custom-prompt').value.trim(),
-});
+let charts = {};
+let selectedProject = null;
+let resolvedCloudId = null;
+let resolvedSiteUrl = null;
 
-function showError(msg) {
-  const el = $('error-banner');
-  el.textContent = msg;
-  el.classList.add('show');
-}
-function clearError() { $('error-banner').classList.remove('show'); }
-
-function setStatus(state) {
-  const dot = $('dot');
-  const txt = $('status-text');
-  if (state === 'ok')   { dot.className='status-dot ok';  txt.textContent='Pripojený'; }
-  if (state === 'err')  { dot.className='status-dot err'; txt.textContent='Chyba'; }
-  if (state === 'idle') { dot.className='status-dot';     txt.textContent='Nepripojený'; }
+// ── Persist key in session
+const savedKey = sessionStorage.getItem('claude-key');
+if (savedKey) { $('claude-key').value = savedKey; checkReady(); }
+function onKeyInput() {
+  sessionStorage.setItem('claude-key', $('claude-key').value.trim());
+  checkReady();
 }
 
-function setLoading(show, text = 'Načítavam...') {
-  $('empty-state').style.display = show ? 'none' : ($('dashboard').style.display === 'none' ? 'flex' : 'none');
-  $('loading-state').style.display = show ? 'flex' : 'none';
-  $('loading-text').textContent = text;
+function checkReady() {
+  $('load-btn').disabled = !(
+    $('claude-key').value.trim() &&
+    selectedProject &&
+    resolvedCloudId
+  );
 }
 
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    const ids = ['overview','changelog','custom'];
-    t.classList.toggle('active', ids[i] === tab);
+function resetProjects() {
+  selectedProject = null;
+  resolvedCloudId = null;
+  $('proj-list').innerHTML = '<div class="empty-proj">Najprv načítaj projekty ↑</div>';
+  checkReady();
+}
+
+function selectProject(key, name) {
+  selectedProject = key;
+  document.querySelectorAll('.proj-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.key === key);
   });
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  $('tab-'+tab).classList.add('active');
+  checkReady();
 }
 
-// ═══════════════════════════════════════════════════════
-//  JIRA API
-// ═══════════════════════════════════════════════════════
-async function jiraFetch(path, config) {
-  const auth = btoa(`${config.email}:${config.token}`);
-  const res = await fetch(`${config.url}/rest/api/3${path}`, {
+// ── UI helpers
+function showErr(msg) { const e=$('err-box'); e.textContent=msg; e.classList.add('show'); }
+function clearErr()   { $('err-box').classList.remove('show'); }
+function setStatus(s) {
+  const p=$('status-pill'); p.className='pill';
+  if(s==='ok')  { p.classList.add('pill-ok');   p.textContent='connected'; }
+  else if(s==='err') { p.classList.add('pill-err');  p.textContent='error'; }
+  else          { p.classList.add('pill-idle'); p.textContent='idle'; }
+}
+function setLoading(on, text='Volám Claude + Atlassian MCP...') {
+  $('loading-state').style.display = on ? 'flex' : 'none';
+  $('loading-text').textContent = text;
+  if(on) { $('empty-state').style.display='none'; $('dashboard').style.display='none'; }
+}
+function switchTab(t) {
+  ['overview','changelog','ai'].forEach((id,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', id===t);
+    $('tab-'+id).classList.toggle('active', id===t);
+  });
+}
+
+// ── Generic Claude API call (no MCP — for AI analysis)
+async function callClaude(messages, claudeKey, maxTokens=1200) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
     headers: {
-      'Authorization': `Basic ${auth}`,
-      'Accept': 'application/json',
-    }
+      'Content-Type': 'application/json',
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-calls': 'true',
+    },
+    body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:maxTokens, messages })
   });
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Jira API ${res.status}: ${err.slice(0,200)}`);
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error?.message || `Claude API ${res.status}`);
   }
   return res.json();
 }
 
-async function fetchIssues(config) {
-  const projectClause = config.project
-    ? `project in (${config.project.split(',').map(p=>`"${p.trim()}"`).join(',')}) AND `
-    : '';
-  const statusClause = config.statusFilter
-    ? `status in (${config.statusFilter.split(',').map(s=>`"${s.trim()}"`).join(',')}) AND `
-    : '';
-  const jql = `${projectClause}${statusClause}ORDER BY updated DESC`;
-
-  const data = await jiraFetch(
-    `/search?jql=${encodeURIComponent(jql)}&maxResults=${config.limit}&fields=summary,status,assignee,priority,created,updated,resolutiondate,issuetype&expand=changelog`,
-    config
-  );
-  return data.issues || [];
+// ── Claude API call WITH Atlassian MCP
+async function callClaudeWithMCP(userPrompt, claudeKey, systemPrompt, maxTokens=8000) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-calls': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      mcp_servers: [{
+        type: 'url',
+        url: 'https://mcp.atlassian.com/v1/mcp',
+        name: 'atlassian-mcp',
+      }],
+      system: systemPrompt,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error?.message || `Claude API ${res.status}`);
+  }
+  const data = await res.json();
+  const textBlock = data.content?.find(b => b.type==='text');
+  if (!textBlock) throw new Error('Claude nevrátil žiadny text. Skontroluj či je Atlassian MCP povolený v Claude účte.');
+  let raw = textBlock.text.trim()
+    .replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Claude nevrátil validný JSON.\n\nOdpoveď: ' + raw.slice(0,400));
+  return JSON.parse(m[0]);
 }
 
-// ═══════════════════════════════════════════════════════
-//  METRICS COMPUTATION
-// ═══════════════════════════════════════════════════════
+// ── Step 2: Load projects dynamically
+async function loadProjects() {
+  const claudeKey = $('claude-key').value.trim();
+  const siteInput = $('jira-url').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  clearErr();
+
+  if (!claudeKey) { showErr('Najprv vlož Claude API key.'); return; }
+  if (!siteInput) { showErr('Vlož Atlassian site URL (napr. mojafirma.atlassian.net).'); return; }
+
+  $('proj-list').innerHTML = '<div class="empty-proj"><span style="color:var(--accent)">načítavam...</span></div>';
+  $('load-proj-btn').disabled = true;
+
+  try {
+    const result = await callClaudeWithMCP(
+      `Use the getAccessibleAtlassianResources tool to find the cloudId for site "${siteInput}". Then use getVisibleJiraProjects with that cloudId to list all projects. Return JSON with:
+{
+  "cloudId": "...",
+  "siteUrl": "https://....atlassian.net",
+  "projects": [
+    { "key": "PROJ", "name": "Project Name" }
+  ]
+}`,
+      claudeKey,
+      `You fetch Atlassian resource info and return ONLY valid JSON, no markdown, no explanation.
+If the user's site is "${siteInput}", find its cloudId and list projects.
+Respond with ONLY a JSON object matching the requested structure.`
+    );
+
+    resolvedCloudId = result.cloudId;
+    resolvedSiteUrl = result.siteUrl || `https://${siteInput}`;
+    const projects = result.projects || [];
+
+    if (!projects.length) {
+      $('proj-list').innerHTML = '<div class="empty-proj">Žiadne projekty nenájdené.<br>Skontroluj URL a Atlassian prepojenie v Claude.</div>';
+      return;
+    }
+
+    $('proj-list').innerHTML = projects.map(p => `
+      <div class="proj-item" data-key="${p.key}" onclick="selectProject('${p.key}','${p.name}')">
+        <span class="proj-key">${p.key}</span>
+        <span class="proj-name">— ${p.name}</span>
+      </div>`).join('');
+
+    // Auto-select first
+    selectProject(projects[0].key, projects[0].name);
+    document.querySelector('.proj-item')?.classList.add('active');
+
+  } catch(e) {
+    $('proj-list').innerHTML = '<div class="empty-proj" style="color:var(--danger)">Chyba: ' + e.message.slice(0,120) + '</div>';
+    showErr('Nepodarilo sa načítať projekty: ' + e.message);
+  } finally {
+    $('load-proj-btn').disabled = false;
+  }
+}
+
+// ── Metrics
 function computeMetrics(issues) {
-  const statusCounts = {};
-  const assigneeCounts = {};
-  const cycleTimes = [];
-
-  issues.forEach(issue => {
-    // Status
-    const status = issue.fields.status?.name || 'Unknown';
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
-
-    // Assignee
-    const assignee = issue.fields.assignee?.displayName || 'Unassigned';
-    assigneeCounts[assignee] = (assigneeCounts[assignee] || 0) + 1;
-
-    // Cycle time: created → resolutiondate (or now)
-    const created = new Date(issue.fields.created);
-    const resolved = issue.fields.resolutiondate ? new Date(issue.fields.resolutiondate) : null;
-    if (resolved) {
-      const days = (resolved - created) / 86400000;
-      cycleTimes.push({ key: issue.key, days: Math.round(days * 10) / 10 });
-    }
+  const sc={}, ac={}, ct=[];
+  issues.forEach(i => {
+    const s=i.status||'Unknown'; sc[s]=(sc[s]||0)+1;
+    const a=i.assignee||'Unassigned'; ac[a]=(ac[a]||0)+1;
+    if(i.cycle_time_days!=null) ct.push({key:i.key, days:i.cycle_time_days});
   });
-
-  const avgCycleTime = cycleTimes.length
-    ? Math.round(cycleTimes.reduce((a, b) => a + b.days, 0) / cycleTimes.length * 10) / 10
-    : null;
-
-  return { statusCounts, assigneeCounts, cycleTimes, avgCycleTime };
+  const avg = ct.length ? Math.round(ct.reduce((a,b)=>a+b.days,0)/ct.length*10)/10 : null;
+  return {sc, ac, ct, avg};
 }
 
-// ═══════════════════════════════════════════════════════
-//  CHANGELOG HELPERS
-// ═══════════════════════════════════════════════════════
-function extractChangelog(issue) {
-  const histories = issue.changelog?.histories || [];
-  return histories
-    .flatMap(h => h.items.map(item => ({
-      date: h.created,
-      author: h.author?.displayName || '?',
-      field: item.field,
-      from: item.fromString,
-      to: item.toString,
-    })))
-    .filter(c => ['status','assignee','priority'].includes(c.field))
-    .slice(0, 8);
+function statusChip(s) {
+  const l=(s||'').toLowerCase();
+  let c='todo';
+  if(l.includes('progress')||l.includes('review')) c='progress';
+  else if(l.includes('done')||l.includes('closed')||l.includes('resolved')) c='done';
+  else if(l.includes('block')) c='blocked';
+  return `<span class="chip ${c}">${s}</span>`;
 }
 
-function cycleTimeForIssue(issue) {
-  const created = new Date(issue.fields.created);
-  const resolved = issue.fields.resolutiondate ? new Date(issue.fields.resolutiondate) : null;
-  if (!resolved) return null;
-  return Math.round((resolved - created) / 86400000 * 10) / 10;
+const COLORS=['#7c6af7','#38bdf8','#34d399','#fbbf24','#f87171','#a78bfa','#67e8f9','#6ee7b7'];
+
+function renderKPIs(issues, m) {
+  const done=Object.entries(m.sc).filter(([k])=>k.toLowerCase().includes('done')||k.toLowerCase().includes('closed')).reduce((a,[,v])=>a+v,0);
+  $('kpi-row').innerHTML=`
+    <div class="kpi" style="--kpi-color:var(--accent)"><div class="kl">Issues</div><div class="kv">${issues.length}</div><div class="ks">načítaných cez MCP</div></div>
+    <div class="kpi" style="--kpi-color:var(--accent3)"><div class="kl">Done</div><div class="kv">${done}</div><div class="ks">${issues.length?Math.round(done/issues.length*100):0}% dokončených</div></div>
+    <div class="kpi" style="--kpi-color:var(--warn)"><div class="kl">Avg cycle time</div><div class="kv">${m.avg!=null?m.avg+'d':'–'}</div><div class="ks">vytvorenie → done</div></div>
+    <div class="kpi" style="--kpi-color:var(--accent2)"><div class="kl">Assignees</div><div class="kv">${Object.keys(m.ac).length}</div><div class="ks">unikátnych</div></div>`;
 }
 
-function statusChip(status) {
-  const s = (status || '').toLowerCase();
-  let cls = 'todo';
-  if (s.includes('progress') || s.includes('review')) cls = 'progress';
-  else if (s.includes('done') || s.includes('closed') || s.includes('resolved')) cls = 'done';
-  else if (s.includes('block')) cls = 'blocked';
-  return `<span class="chip ${cls}">${status}</span>`;
+function renderCharts(m) {
+  Object.values(charts).forEach(c=>c.destroy()); charts={};
+  const base={responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#5a5a72',boxWidth:10,font:{size:10,family:'DM Mono'}}}}};
+  const sL=Object.keys(m.sc);
+  charts.s=new Chart($('chart-status'),{type:'doughnut',data:{labels:sL,datasets:[{data:sL.map(l=>m.sc[l]),backgroundColor:COLORS,borderWidth:0}]},options:{...base,cutout:'68%'}});
+  const aL=Object.keys(m.ac).slice(0,10);
+  charts.a=new Chart($('chart-assignee'),{type:'bar',data:{labels:aL,datasets:[{data:aL.map(l=>m.ac[l]),backgroundColor:'#7c6af7',borderRadius:4,borderWidth:0}]},options:{...base,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#5a5a72',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#8888a8',font:{size:10,family:'DM Mono'}},grid:{display:false}}}}});
+  const ct=[...m.ct].sort((a,b)=>b.days-a.days).slice(0,20);
+  charts.c=new Chart($('chart-cycle'),{type:'bar',data:{labels:ct.map(x=>x.key),datasets:[{label:'dni',data:ct.map(x=>x.days),backgroundColor:'#38bdf8',borderRadius:4,borderWidth:0}]},options:{...base,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8888a8',font:{size:9,family:'DM Mono'}},grid:{display:false}},y:{ticks:{color:'#5a5a72',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}});
 }
 
-// ═══════════════════════════════════════════════════════
-//  RENDER
-// ═══════════════════════════════════════════════════════
-function renderKPIs(issues, metrics) {
-  const done = Object.entries(metrics.statusCounts)
-    .filter(([k]) => k.toLowerCase().includes('done') || k.toLowerCase().includes('closed'))
-    .reduce((a, [, v]) => a + v, 0);
-
-  $('kpi-row').innerHTML = `
-    <div class="kpi accent">
-      <div class="label">Celkom issues</div>
-      <div class="value">${issues.length}</div>
-      <div class="sub">načítaných</div>
-    </div>
-    <div class="kpi success">
-      <div class="label">Done</div>
-      <div class="value">${done}</div>
-      <div class="sub">${issues.length ? Math.round(done/issues.length*100) : 0}% dokončených</div>
-    </div>
-    <div class="kpi warn">
-      <div class="label">Avg cycle time</div>
-      <div class="value">${metrics.avgCycleTime != null ? metrics.avgCycleTime + 'd' : '–'}</div>
-      <div class="sub">dni od vytvorenia po Done</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Unikátnych assignee</div>
-      <div class="value">${Object.keys(metrics.assigneeCounts).length}</div>
-      <div class="sub">&nbsp;</div>
-    </div>
-  `;
-}
-
-const COLORS = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#a855f7','#ec4899','#14b8a6'];
-
-function renderCharts(metrics) {
-  const chartOpts = {
-    responsive: true,
-    maintainAspectRatio: true,
-    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 11 } } } },
-  };
-
-  // Destroy old charts
-  Object.values(charts).forEach(c => c.destroy());
-  charts = {};
-
-  // Status donut
-  const statusLabels = Object.keys(metrics.statusCounts);
-  charts.status = new Chart($('chart-status'), {
-    type: 'doughnut',
-    data: {
-      labels: statusLabels,
-      datasets: [{ data: statusLabels.map(l => metrics.statusCounts[l]), backgroundColor: COLORS, borderWidth: 0 }]
-    },
-    options: { ...chartOpts, cutout: '65%' }
-  });
-
-  // Assignee bar
-  const aLabels = Object.keys(metrics.assigneeCounts).slice(0, 10);
-  charts.assignee = new Chart($('chart-assignee'), {
-    type: 'bar',
-    data: {
-      labels: aLabels,
-      datasets: [{ data: aLabels.map(l => metrics.assigneeCounts[l]), backgroundColor: '#6366f1', borderRadius: 5, borderWidth: 0 }]
-    },
-    options: {
-      ...chartOpts,
-      indexAxis: 'y',
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } }
-      }
-    }
-  });
-
-  // Cycle time bar
-  const ctSorted = [...metrics.cycleTimes].sort((a,b) => b.days - a.days).slice(0, 20);
-  charts.cycletime = new Chart($('chart-cycletime'), {
-    type: 'bar',
-    data: {
-      labels: ctSorted.map(x => x.key),
-      datasets: [{ label: 'Dni', data: ctSorted.map(x => x.days), backgroundColor: '#06b6d4', borderRadius: 4, borderWidth: 0 }]
-    },
-    options: {
-      ...chartOpts,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
-        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
-      }
-    }
-  });
-}
-
-function renderChangelog(issues) {
-  const tbody = $('changelog-body');
-  tbody.innerHTML = issues.slice(0, 50).map(issue => {
-    const changelog = extractChangelog(issue);
-    const ct = cycleTimeForIssue(issue);
-    return `
-      <tr>
-        <td><a href="${cfg().url}/browse/${issue.key}" target="_blank" style="color:var(--accent2);text-decoration:none;font-weight:600">${issue.key}</a></td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${issue.fields.summary}</td>
-        <td>${statusChip(issue.fields.status?.name)}</td>
-        <td style="white-space:nowrap">${ct != null ? ct + ' dní' : '–'}</td>
-        <td>
-          <ul class="changelog-list">
-            ${changelog.length ? changelog.map(c =>
-              `<li><strong style="color:var(--text)">${c.field}</strong>: ${c.from || '–'} → ${c.to || '–'} <span style="opacity:.5">(${new Date(c.date).toLocaleDateString('sk')})</span></li>`
-            ).join('') : '<li>Žiadna história</li>'}
-          </ul>
-        </td>
-      </tr>`;
+function renderChangelog(issues, siteUrl) {
+  $('cl-body').innerHTML=issues.slice(0,60).map(i=>{
+    const cl=(i.changelog||[]).slice(0,5);
+    return `<tr>
+      <td><a class="klink" href="${siteUrl}/browse/${i.key}" target="_blank">${i.key}</a></td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted2)">${i.summary}</td>
+      <td>${statusChip(i.status)}</td>
+      <td style="white-space:nowrap;color:var(--muted2)">${i.cycle_time_days!=null?i.cycle_time_days+' dní':'–'}</td>
+      <td><ul class="cl-list">${cl.length?cl.map(c=>`<li><strong style="color:var(--text)">${c.field}</strong> ${c.from||'?'} → ${c.to||'?'}</li>`).join(''):'<li>žiadna história</li>'}</ul></td>
+    </tr>`;
   }).join('');
 }
 
-function renderRawPreview(issues) {
-  const preview = issues.slice(0, 3).map(i => ({
-    key: i.key,
-    summary: i.fields.summary,
-    status: i.fields.status?.name,
-    changelog_count: i.changelog?.histories?.length || 0,
-    sample_changelog: (i.changelog?.histories || []).slice(0, 2),
-  }));
-  $('raw-preview').textContent = JSON.stringify(preview, null, 2);
-}
-
-// ═══════════════════════════════════════════════════════
-//  CLAUDE AI INSIGHTS
-// ═══════════════════════════════════════════════════════
+// ── AI analysis
 async function runAIAnalysis(issues, customPrompt, claudeKey) {
-  if (!claudeKey) return;
-
-  const box = $('ai-insights-box');
-  const txt = $('ai-insights-text');
-  box.style.display = 'block';
-  box.classList.add('loading');
-  txt.textContent = 'Analyzujem...';
-
-  // Build compact summary of changelogs for Claude
-  const summary = issues.slice(0, 30).map(issue => ({
-    key: issue.key,
-    summary: issue.fields.summary,
-    status: issue.fields.status?.name,
-    created: issue.fields.created,
-    resolved: issue.fields.resolutiondate,
-    assignee: issue.fields.assignee?.displayName,
-    changelog: extractChangelog(issue),
-  }));
-
-  const prompt = customPrompt || `Analyzuj tieto Jira issues a changelog dáta. 
-Poskytni stručný prehľad:
+  const card=$('ai-card'), txt=$('ai-text');
+  card.style.display='block'; txt.textContent='Analyzujem...'; txt.classList.add('blink');
+  const summary=issues.slice(0,25).map(i=>({key:i.key,summary:i.summary,status:i.status,assignee:i.assignee,cycle_time_days:i.cycle_time_days,changelog:i.changelog?.slice(0,4)||[]}));
+  const prompt=customPrompt||`Analyzuj tieto Jira issues a changelog dáta. Odpovedaj v slovenčine, stručne:
 1. Celkový stav projektu
-2. Bottlenecky (issues s dlhým cycle time alebo opakovanými návratmi)  
-3. Rozdelenie záťaže medzi tímovými členmi
-4. Konkrétne odporúčania
-
-Odpovedaj v slovenčine, stručne a actionably.`;
-
+2. Bottlenecky (dlhý cycle time, opakovanie stavov)
+3. Záťaž medzi členmi tímu
+4. Top 3 akčné odporúčania`;
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': claudeKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `${prompt}\n\n---\nDATA:\n${JSON.stringify(summary, null, 2)}`
-        }]
-      })
-    });
-    const data = await res.json();
-    box.classList.remove('loading');
-    txt.textContent = data.content?.[0]?.text || 'Nepodarilo sa získať odpoveď.';
-  } catch (e) {
-    box.classList.remove('loading');
-    txt.textContent = `Chyba pri volaní Claude API: ${e.message}`;
+    const d=await callClaude([{role:'user',content:`${prompt}\n\nDATA:\n${JSON.stringify(summary,null,2)}`}], claudeKey);
+    txt.classList.remove('blink');
+    txt.textContent=d.content?.[0]?.text||'Žiadna odpoveď.';
+  } catch(e) {
+    txt.classList.remove('blink');
+    txt.textContent='Chyba AI analýzy: '+e.message;
   }
 }
 
-// ═══════════════════════════════════════════════════════
-//  MAIN LOAD
-// ═══════════════════════════════════════════════════════
-async function loadData() {
-  const config = cfg();
-  clearError();
+// ── Main dashboard load
+async function loadDashboard() {
+  const claudeKey=$('claude-key').value.trim();
+  const project=selectedProject;
+  const cloudId=resolvedCloudId;
+  const siteUrl=resolvedSiteUrl;
+  const limit=parseInt($('jira-limit').value);
+  const customPrompt=$('custom-prompt').value.trim();
+  clearErr();
 
-  if (!config.url || !config.email || !config.token) {
-    showError('Vyplň Jira URL, email a API token.');
-    return;
-  }
+  if(!claudeKey||!project||!cloudId) { showErr('Skontroluj všetky kroky: Claude key, Jira URL, výber projektu.'); return; }
 
-  // Save to sessionStorage (no server)
-  sessionStorage.setItem('jira-cfg', JSON.stringify({
-    url: config.url, email: config.email, project: config.project
-  }));
-
-  setLoading(true, 'Načítavam issues z Jiry...');
-  $('dashboard').style.display = 'none';
+  $('load-btn').disabled=true;
+  setLoading(true, `Načítavam issues z projektu ${project}...`);
 
   try {
-    const issues = await fetchIssues(config);
-    state.issues = issues;
+    const result = await callClaudeWithMCP(
+      `Fetch the last ${limit} Jira issues from project "${project}" on site with cloudId "${cloudId}".
+For each issue get: key, summary, status name, assignee display name, priority, created date, resolution date, and changelog (status changes only).
+Calculate cycle_time_days = days from created to resolution date (null if unresolved).
 
-    setLoading(true, `Spracovávam ${issues.length} issues...`);
-    const metrics = computeMetrics(issues);
+Return ONLY this JSON:
+{
+  "issues": [{
+    "key": "...", "summary": "...", "status": "...", "assignee": "...",
+    "priority": "...", "created": "...", "resolved": "...",
+    "cycle_time_days": number|null,
+    "changelog": [{"date":"...","field":"status","from":"...","to":"..."}]
+  }],
+  "meta": { "project": "${project}", "fetched": 0 }
+}`,
+      claudeKey,
+      `You are a Jira data fetcher. Use Atlassian MCP tools to fetch issues and return ONLY valid JSON, no markdown, no explanation.`
+    );
+
+    const issues=result.issues||[];
+    if(!issues.length) throw new Error('Žiadne issues nenájdené v projekte '+project+'. Skontroluj project key a prístupové práva.');
+
+    setLoading(true,`Spracovávam ${issues.length} issues...`);
+    const metrics=computeMetrics(issues);
 
     setLoading(false);
-    $('dashboard').style.display = 'block';
-    $('refresh-btn').style.display = 'inline-flex';
+    $('dashboard').style.display='block';
+    $('refresh-btn').style.display='inline-block';
     setStatus('ok');
 
-    renderKPIs(issues, metrics);
+    renderKPIs(issues,metrics);
     renderCharts(metrics);
-    renderChangelog(issues);
-    renderRawPreview(issues);
+    renderChangelog(issues, siteUrl);
+    $('raw-pre').textContent=JSON.stringify(issues.slice(0,3).map(i=>({...i,changelog:i.changelog?.slice(0,3)})),null,2);
 
-    // AI async (non-blocking)
-    if (config.claudeKey) {
-      runAIAnalysis(issues, config.customPrompt, config.claudeKey);
-      switchTab('custom');
-      setTimeout(() => switchTab('overview'), 100);
-    }
+    runAIAnalysis(issues, customPrompt, claudeKey);
 
-  } catch (err) {
+  } catch(e) {
     setLoading(false);
-    $('empty-state').style.display = 'flex';
+    $('empty-state').style.display='flex';
     setStatus('err');
-    showError(`Chyba: ${err.message}`);
-    console.error(err);
+    showErr('Chyba: '+e.message);
+    console.error(e);
+  } finally {
+    $('load-btn').disabled=false;
   }
-}
-
-// Restore partial config from session
-const saved = sessionStorage.getItem('jira-cfg');
-if (saved) {
-  try {
-    const c = JSON.parse(saved);
-    if (c.url) $('jira-url').value = c.url;
-    if (c.email) $('jira-email').value = c.email;
-    if (c.project) $('jira-project').value = c.project;
-  } catch {}
 }
 </script>
 </body>
